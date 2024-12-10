@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Android Tic-Tac-Toe</string>
+    <string name="first_human">You go first.</string>
+    <string name="turn_human">Your turn human.</string>
+    <string name="turn_computer">Android\'s turn.</string>
+    <string name="result_tie">It\'s a tie.</string>
+    <string name="result_human_wins">You won!</string>
+    <string name="result_computer_wins">Android won!</string>
+    <string name="new_game">Nuevo Juego</string>
+    <string name="new_game_button">Nuevo juego</string>
+    <string name="difficulty_choose">Elige la dificultad</string>
+    <string name="difficulty_easy">Facil</string>
+    <string name="difficulty_harder">Dificil</string>
+    <string name="difficulty_expert">Experto</string>
+    <string name="cancel">Cancel</string>
+    <string name="quit_question">¿Estas seguro de querer salir?</string>
+    <string name="yes">Si</string>
+    <string name="no">No</string>
+    <string name="quit">Salir</string>
+    <string name="coded_by">Programado por Julian Steven Vega Daza</string>
+    <string name="about">Ayuda</string>
+</resources>
