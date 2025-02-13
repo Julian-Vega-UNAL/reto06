@@ -7,7 +7,37 @@ import java.util.Scanner;
 public class TicTacToeGame {
 
     // The computer's difficulty levels
-    public enum DifficultyLevel {Easy, Harder, Expert};
+    public enum DifficultyLevel {
+        Easy, Harder, Expert;
+
+        // Método para obtener un entero asociado al nivel
+        public int getValue() {
+            switch (this) {
+                case Easy:
+                    return 0;
+                case Harder:
+                    return 1;
+                case Expert:
+                    return 2;
+                default:
+                    return -1; // Valor por defecto
+            }
+        }
+
+        // Método para obtener un nivel a partir de un entero
+        public static DifficultyLevel fromInt(int value) {
+            switch (value) {
+                case 0:
+                    return Easy;
+                case 1:
+                    return Harder;
+                case 2:
+                    return Expert;
+                default:
+                    return Expert; // Valor por defecto
+            }
+        }
+    };
     // Current difficulty level
     private DifficultyLevel mDifficultyLevel = DifficultyLevel.Expert;
     private final char[] mBoard = {'1','2','3','4','5','6','7','8','9'};
@@ -200,5 +230,12 @@ public class TicTacToeGame {
         return BOARD_SIZE;
     }
 
-}
+    public char[] getBoardState() {
+        return mBoard.clone(); // Devuelve una copia del arreglo actual del tablero
+    }
 
+    public void setBoardState(char[] boardState){
+        System.arraycopy(boardState, 0, this.mBoard, 0, boardState.length);
+    }
+
+}

@@ -10,10 +10,10 @@
         android:title="@string/difficulty_choose"
         android:icon="@android:drawable/ic_menu_manage"
         />
-    <item android:id="@+id/quit"
-        android:title="@string/quit"
-        android:icon="@android:drawable/ic_menu_close_clear_cancel"
-        />
+
+    <item
+        android:id="@+id/menu_reset_scores"
+        android:title="@string/reset_scores"/>
     <item
         android:id="@+id/menu_about"
         android:title="@string/about"

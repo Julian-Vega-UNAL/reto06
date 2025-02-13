@@ -7,8 +7,8 @@
 
 
     <ImageView
-        android:layout_width="400dp"
-        android:layout_height="wrap_content"
+        android:layout_width="314dp"
+        android:layout_height="151dp"
         android:layout_gravity="center"
         android:contentDescription="@string/app_name"
         android:src="@drawable/iconimage" />

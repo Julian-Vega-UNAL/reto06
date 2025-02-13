@@ -87,7 +87,7 @@ class BoardView @JvmOverloads constructor(
 
     override fun performClick(): Boolean {
         super.performClick() // Llama a la implementación de la superclase para que el comportamiento estándar también sea ejecutado
-        // Puedes agregar aquí lógica adicional si es necesario
+        // Puedes agregar aquí lógica adicional s i es necesario
         return true
     }
 

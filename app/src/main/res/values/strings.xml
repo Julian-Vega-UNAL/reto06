@@ -19,4 +19,6 @@
     <string name="quit">Salir</string>
     <string name="coded_by">Programado por Julian Steven Vega Daza</string>
     <string name="about">Ayuda</string>
+    <string name="info">info</string>
+    <string name="reset_scores">Resetar Puntajes</string>
 </resources>

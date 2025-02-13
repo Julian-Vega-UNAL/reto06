@@ -1,9 +1,16 @@
 package co.edu.unal.tictactoe
+import co.edu.unal.tictactoe.BoardView
+import co.edu.unal.tictactoe.R
+import co.edu.unal.tictactoe.TicTacToeGame
+
 
 import android.app.AlertDialog
+import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
@@ -53,12 +60,29 @@ class MainActivity : ComponentActivity() {
 
     private var gameOver = false  // Variable para rastrear si el juego ha terminado
 
+    private lateinit var sharedPreferences: SharedPreferences
+
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)  // Asocia el layout XML con la actividad
 
+        // Inicializar SharedPreferences
+        sharedPreferences = getSharedPreferences("ttt_prefs", MODE_PRIVATE)
+
+        // Inicializar el juego
+        mGame = TicTacToeGame()
+
+        // Restaurar el nivel de dificultad
+        val difficultyValue = sharedPreferences.getInt("difficultyLevel", DifficultyLevel.Expert.value)
+        mGame.difficultyLevel = DifficultyLevel.fromInt(difficultyValue)
+
+        // Restaurar puntajes
+        humanWinsCount = sharedPreferences.getInt("humanWins", 0)
+        androidWinsCount = sharedPreferences.getInt("androidWins", 0)
+        tiesCount = sharedPreferences.getInt("ties", 0)
 
 
         humanWinsTextView = findViewById(R.id.human_wins)
@@ -69,8 +93,7 @@ class MainActivity : ComponentActivity() {
         // Inicializar el TextView
         mInfoTextView = findViewById(R.id.information)
 
-        // Inicializar el juego
-        mGame = TicTacToeGame()
+
 
         // Inicializar el botón de nuevo juego
         mNewGameButton = findViewById(R.id.button_new_game)
@@ -93,7 +116,9 @@ class MainActivity : ComponentActivity() {
 
 
                 // Verificar que la celda esté vacía y colocar la ficha del jugador
-                if (mGame.getBoardOccupant(pos) != TicTacToeGame.OPEN_SPOT) {
+                if (mGame.getBoardOccupant(pos) != TicTacToeGame.OPEN_SPOT
+                    && mGame.getBoardOccupant(pos) != TicTacToeGame.HUMAN_PLAYER
+                    && mGame.getBoardOccupant(pos) != TicTacToeGame.COMPUTER_PLAYER) {
                     if (mHumanMediaPlayer != null) {
                         mHumanMediaPlayer?.start() // Reproduce el sonido del humano
                     }
@@ -107,19 +132,23 @@ class MainActivity : ComponentActivity() {
                         // Si no hay ganador, hacer que la computadora juegue
                         isHumanTurn = false
                         // Usar Handler para hacer que la computadora espere 1 segundo
-                        Handler().postDelayed({
+                        Handler(Looper.getMainLooper()).postDelayed({
                             val computerMove = mGame.getComputerMove()
-                            setMove(TicTacToeGame.COMPUTER_PLAYER, computerMove)
-                            // Para la computadora
-                            if (mComputerMediaPlayer != null) {
-                                mComputerMediaPlayer?.start() // Reproduce el sonido de la computadora
+                            try {
+                                setMove(TicTacToeGame.COMPUTER_PLAYER, computerMove)
+                                mInfoTextView.setText(R.string.turn_human)
+                                mBoardView.invalidate() // Redibujar el tablero después del movimiento de la computadora
+                                isHumanTurn = true
+                                winner = mGame.checkForWinner()
+                                checkWinner(winner)
+                                // Para la computadora
+                                if (mComputerMediaPlayer != null) {
+                                    mComputerMediaPlayer?.start() // Reproduce el sonido de la computadora
+                                }
+                            } catch (e: Exception) {
+                                Log.e("TicTacToe", "Error al ejecutar el movimiento del ordenador", e)
                             }
-                            mInfoTextView.setText(R.string.turn_human)
-                            mBoardView.invalidate() // Redibujar el tablero después del movimiento de la computadora
-                            isHumanTurn = true
-                            winner = mGame.checkForWinner()
-                            checkWinner(winner)
-                        }, 2010) // 1000 milisegundos = 1 segundo
+                        }, 2500) // 1000 milisegundos = 1 segundo
 
                     }
 
@@ -134,14 +163,43 @@ class MainActivity : ComponentActivity() {
 
         mBoardView.setOnTouchListener(mTouchListener)
 
-        // Comenzar un nuevo juego al cargar la app
-        startNewGame()
+        if (savedInstanceState == null) {
+            // Iniciar un nuevo juego si no hay estado guardado
+            startNewGame()
+        } else {
+            // Restaurar el estado del juego desde el Bundle
+            mGame.boardState = savedInstanceState.getCharArray("board")
+            gameOver = savedInstanceState.getBoolean("gameOver", false)
+            isHumanStarting = savedInstanceState.getBoolean("isHumanStarting", true)
+            isHumanTurn = savedInstanceState.getBoolean("isHumanTurn", true)
+            humanWinsCount = savedInstanceState.getInt("humanWinsCount", 0)
+            tiesCount = savedInstanceState.getInt("tiesCount", 0)
+            androidWinsCount = savedInstanceState.getInt("androidWinsCount", 0)
+            mInfoTextView.text = savedInstanceState.getCharSequence("info", "")
 
+            if (!gameOver && !isHumanTurn) {
+                val computerMove = mGame.getComputerMove()
+                setMove(TicTacToeGame.COMPUTER_PLAYER, computerMove)
+
+                mInfoTextView.setText(R.string.turn_human)
+                mBoardView.invalidate() // Redibujar el tablero después del movimiento de la computadora
+                isHumanTurn = true
+            }
+
+        }
+        // Mostrar puntajes actualizados
+        displayScores()
         // Configurar el listener para el botón de nuevo juego
         mNewGameButton.setOnClickListener {
             startNewGame()  // Iniciar un nuevo juego cuando se presiona el botón
         }
 
+    }
+
+    private fun displayScores() {
+        tiesTextView.text = "Ties: $tiesCount"
+        humanWinsTextView.text = "Human: $humanWinsCount"
+        androidWinsTextView.text = "Android: $androidWinsCount"
     }
 
     private fun checkWinner(winner: Int) {
@@ -172,6 +230,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+
+        // Guardar los puntajes actuales
+        sharedPreferences.edit().apply(){
+            putInt("difficultyLevel", mGame.difficultyLevel.value)
+            putInt("humanWins", humanWinsCount)
+            putInt("androidWins", androidWinsCount)
+            putInt("ties", tiesCount)
+            apply()
+        }
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+
+        // Restaurar el estado del juego desde el Bundle
+        mGame.boardState = savedInstanceState.getCharArray("board")
+        gameOver = savedInstanceState.getBoolean("gameOver", false)
+        isHumanStarting = savedInstanceState.getBoolean("isHumanStarting", true)
+        isHumanTurn = savedInstanceState.getBoolean("isHumanTurn", true)
+        humanWinsCount = savedInstanceState.getInt("humanWinsCount", 0)
+        tiesCount = savedInstanceState.getInt("tiesCount", 0)
+        androidWinsCount = savedInstanceState.getInt("androidWinsCount", 0)
+        mInfoTextView.text = savedInstanceState.getCharSequence("info", "")
+
+        // Mostrar puntajes actualizados
+        displayScores()
+    }
+
+
     // Configura el tablero para un nuevo juego
     private fun startNewGame() {
         // Limpiar el tablero interno del juego
@@ -185,16 +274,20 @@ class MainActivity : ComponentActivity() {
         if (isHumanStarting) {
             mInfoTextView.setText(R.string.turn_human)
         } else {
-            Handler().postDelayed({
+            Handler(Looper.getMainLooper()).postDelayed({
                 val computerMove = mGame.getComputerMove()
-                setMove(TicTacToeGame.COMPUTER_PLAYER, computerMove)
-                // Para la computadora
-                if (mComputerMediaPlayer != null) {
-                    mComputerMediaPlayer?.start() // Reproduce el sonido de la computadora
+                try {
+                    setMove(TicTacToeGame.COMPUTER_PLAYER, computerMove)
+                    // Para la computadora
+                    if (mComputerMediaPlayer != null) {
+                        mComputerMediaPlayer?.start() // Reproduce el sonido de la computadora
+                    }
+                    mInfoTextView.setText(R.string.turn_human)
+                    mBoardView.invalidate() // Redibujar el tablero después del movimiento de la computadora
+                    isHumanTurn = true
+                } catch (e: Exception) {
+                    Log.e("TicTacToe", "Error al ejecutar el movimiento del ordenador", e)
                 }
-                mInfoTextView.setText(R.string.turn_human)
-                mBoardView.invalidate() // Redibujar el tablero después del movimiento de la computadora
-                isHumanTurn = true
             }, 1000) // 1000 milisegundos = 1 segundo
         }
 
@@ -205,8 +298,8 @@ class MainActivity : ComponentActivity() {
     private fun showGameOverMessage(winner: Int) {
         val message = when (winner) {
             1 -> "¡Es un empate!" // Empate
-            2 -> "¡El jugador X ganó!" // Victoria del jugador humano
-            3 -> "¡El jugador O ganó!" // Victoria de la computadora
+            2 -> "¡DIO ganó!" // Victoria del jugador humano
+            3 -> "¡El botsito ganó!" // Victoria de la computadora
             else -> "¡Juego terminado!"
         }
 
@@ -242,8 +335,20 @@ class MainActivity : ComponentActivity() {
                 showDifficultyDialog()
                 return true
             }
-            R.id.quit -> {
-                showQuitConfirmationDialog()
+            R.id.menu_reset_scores -> {
+                humanWinsCount = 0
+                androidWinsCount = 0
+                tiesCount = 0
+
+                // Guardar los cambios en SharedPreferences
+                val editor = sharedPreferences.edit()
+                editor.putInt("humanWins", humanWinsCount)
+                editor.putInt("androidWins", androidWinsCount)
+                editor.putInt("ties", tiesCount)
+                editor.apply()
+
+                // Actualizar la visualización
+                displayScores()
                 return true
             }
             R.id.menu_about -> {
@@ -298,16 +403,6 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private fun showQuitConfirmationDialog() {
-        AlertDialog.Builder(this)
-            .setMessage(getString(R.string.quit_question))
-            .setCancelable(false) // Evita que el usuario cierre el diálogo tocando fuera de él
-            .setPositiveButton(getString(R.string.yes)) { _, _ ->
-                finish() // Finaliza la actividad
-            }
-            .setNegativeButton(getString(R.string.no), null) // Cierra el diálogo sin hacer nada
-            .show()
-    }
 
     override fun onResume() {
         super.onResume()
@@ -319,6 +414,24 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         mHumanMediaPlayer?.release()
         mComputerMediaPlayer?.release()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+
+
+        // Guardar el estado del tablero
+        outState.putCharArray("board", mGame.boardState)
+
+
+        // Guardar variables de estado
+        outState.putBoolean("gameOver", gameOver)
+        outState.putBoolean("isHumanStarting", isHumanStarting)
+        outState.putBoolean("isHumanTurn", isHumanTurn)
+        outState.putInt("humanWinsCount", humanWinsCount)
+        outState.putInt("tiesCount", tiesCount)
+        outState.putInt("androidWinsCount", androidWinsCount)
+        outState.putCharSequence("info", mInfoTextView.text)
     }
 
 
